@@ -196,7 +196,7 @@
                 const amp=ampFn()||0.1;
                 for(let i=0;i<a.length;i+=3){
                     const x=a[i];
-                    a[i+1]=ecg?ecgShape(x+p,amp):Math.sin(x*f+p)*amp;
+                    a[i+1]=ecg?ecgShape(x+p,amp):Math.sin(x*f+p)*amp ;
                 }
                 g.attributes.position.needsUpdate=true;
                 p+=0.25;
