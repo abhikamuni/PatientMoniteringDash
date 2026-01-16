@@ -1,236 +1,486 @@
-﻿@{
+﻿@model PatinetMo.Models.ViewModels.DashboardViewModel
+@{
     Layout = null;
 }
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ICU Monitor – Correct Alignment</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VitalTrack - Central Monitor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 
     <style>
+        :root {
+            --bg-dark: #101010;
+            --panel-bg: #1a1a1a;
+            --neon-green: #00ff41;
+            --neon-red: #ff2a2a;
+            --text-main: #e0e0e0;
+            --border: #333;
+        }
+
         body {
             margin: 0;
-            background: #010916;
-            color: white;
-            font-family: Arial;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            height: 100vh;
             overflow: hidden;
         }
 
-        #patientSelect {
+        /* SIDEBAR */
+        .sidebar {
+            width: 240px;
+            background: #050505;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+        }
+
+        .brand {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+            .brand span {
+                color: var(--neon-green);
+            }
+
+        .nav-item {
+            padding: 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            color: #888;
+            transition: 0.2s;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+            .nav-item.active, .nav-item:hover {
+                background: #222;
+                color: #fff;
+                border-left: 3px solid var(--neon-green);
+            }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #0d0d0d;
+            position: relative;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        /* PATIENT CARD (CLEAN VERSION) */
+        .patient-card {
+            background: #151515;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 20px;
+            position: relative;
+            transition: border-color 0.3s;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .p-name {
+            font-weight: bold;
+            font-size: 18px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+        }
+
+        .p-details {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+            .p-details strong {
+                color: #999;
+            }
+
+        /* BUTTON */
+        .btn-monitor {
+            margin-top: 10px;
+            width: 100%;
+            padding: 10px;
+            background: #222;
+            border: 1px solid #444;
+            color: var(--neon-green);
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+
+            .btn-monitor:hover {
+                background: var(--neon-green);
+                color: #000;
+            }
+
+        /* STATUS INDICATORS */
+        .status-dot {
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: #333;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .status-ok {
+            background: var(--neon-green);
+            box-shadow: 0 0 5px var(--neon-green);
+        }
+
+        /* Razor Keyframe Escape */
+        .status-crit {
+            background: var(--neon-red);
+            box-shadow: 0 0 10px var(--neon-red);
+            animation: pulse 0.5s infinite;
+        }
+
+        @@keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* MONITOR OVERLAY */
+        #monitorOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 999;
+            display: none;
+            grid-template-rows: 60px 1fr;
+        }
+
+        .mon-header {
+            background: #111;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .mon-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .mon-close {
+            background: #333;
+            border: none;
+            color: #fff;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .mon-grid {
+            display: grid;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 2px;
+            background: #222;
+        }
+
+        .wave-row {
+            position: relative;
+            background: #000;
+            overflow: hidden;
+            background-image: linear-gradient(#111 1px, transparent 1px), linear-gradient(90deg, #111 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .wave-info {
             position: absolute;
-            top: 10px;
-            left: 200px;
+            right: 20px;
+            top: 20px;
+            text-align: right;
             z-index: 10;
         }
 
-        /* LABELS */
-        #labels div {
-            position: absolute;
-            left: 20px;
+        .w-label {
+            font-size: 14px;
             font-weight: bold;
         }
 
-        /* VALUES */
-        #values div {
-            position: absolute;
-            right: 20px;
+        .w-val {
+            font-size: 60px;
             font-weight: bold;
+            line-height: 1;
+            font-family: 'Consolas', monospace;
         }
 
-        /* ROW POSITIONS */
-        .ecg {
-            top: 120px;
-            color: #00ff00
+        .w-unit {
+            font-size: 14px;
+            color: #888;
         }
 
-        .resp {
-            top: 200px;
-            color: #ffff00
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
         }
 
-        .pleth {
-            top: 280px;
-            color: #00ffff
+        /* ALERT LIST */
+        .alert-item {
+            background: #1a0505;
+            border-left: 3px solid var(--neon-red);
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 0 4px 4px 0;
         }
 
-        .co2 {
-            top: 360px;
-            color: #ff00ff
+        .alert-time {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 4px;
+            display: block;
         }
 
-        .art {
-            top: 440px;
-            color: #ff8800
-        }
-
-        .cvp {
-            top: 520px;
-            color: #ff4444
+        .alert-msg {
+            color: #ffcece;
+            font-size: 14px;
         }
     </style>
 </head>
-
 <body>
 
-    <select id="patientSelect">
-        <option value="">Select Patient</option>
-    </select>
-
-    <!-- LABELS -->
-    <div id="labels">
-        <div class="ecg">ECG</div>
-        <div class="resp">RESP</div>
-        <div class="pleth">PLETH</div>
-        <div class="co2">CO₂</div>
-        <div class="art">ART</div>
-        <div class="cvp">CVP</div>
+    <div class="sidebar">
+        <div class="brand">VITAL<span>TRACK</span></div>
+        <div class="nav-item active" onclick="showTab('patients', this)">PATIENTS</div>
+        <div class="nav-item" onclick="showTab('alerts', this)">ALERT LOGS</div>
     </div>
 
-    <!-- VALUES -->
-    <div id="values">
-        <div class="ecg" id="v_ecg"></div>
-        <div class="resp" id="v_resp"></div>
-        <div class="pleth" id="v_spo2"></div>
-        <div class="co2" id="v_co2"></div>
-        <div class="art" id="v_ibp"></div>
-        <div class="cvp" id="v_nibp"></div>
+    <div class="main-content">
+        <div id="tab-patients" class="grid-container">
+            @foreach (var p in Model.Patients)
+            {
+                <div class="patient-card" id="card_@p.PatientId">
+                    <div class="p-name">
+                        <span class="status-dot status-ok" id="dot_@p.PatientId"></span>
+                        @p.Name
+                    </div>
+                    <div class="p-details">
+                        <strong>Patient ID:</strong> #@p.PatientId <br />
+                        <strong>Age:</strong> @p.Age <br />
+                        <strong>Doctor:</strong> Dr. @(p.Doctor?.Name ?? "Unassigned")
+                    </div>
+                    <button class="btn-monitor" onclick="startMonitor(@p.PatientId, '@p.Name')">OPEN MONITOR</button>
+                </div>
+            }
+        </div>
+
+        <div id="tab-alerts" style="display:none;">
+            <h3 style="border-bottom:1px solid #333; padding-bottom:10px;">Recent Critical Alerts</h3>
+            <div id="alert-feed">
+                @foreach (var a in Model.RecentAlerts)
+                {
+                    <div class="alert-item">
+                        <span class="alert-time">@a.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                        <div class="alert-msg"><strong>@a.Severity:</strong> @a.Message</div>
+                    </div>
+                }
+            </div>
+        </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+    <div id="monitorOverlay">
+        <div class="mon-header">
+            <div class="mon-title">ICU MONITOR: <span id="mon_name" style="color:var(--neon-green)">PATIENT</span></div>
+            <button class="mon-close" onclick="closeMonitor()">CLOSE VIEW</button>
+        </div>
+        <div class="mon-grid">
+            <div class="wave-row">
+                <div class="wave-info" style="color:#00ff41"><div class="w-label">ECG</div><div class="w-val" id="mon_hr">--</div><div class="w-unit">BPM</div></div>
+                <canvas id="cvs_ecg"></canvas>
+            </div>
+            <div class="wave-row">
+                <div class="wave-info" style="color:#00f0ff"><div class="w-label">SpO2</div><div class="w-val" id="mon_spo2">--</div><div class="w-unit">%</div></div>
+                <canvas id="cvs_spo2"></canvas>
+            </div>
+            <div class="wave-row">
+                <div class="wave-info" style="color:#ffee00"><div class="w-label">TEMP</div><div class="w-val" id="mon_temp">--</div><div class="w-unit">°C</div></div>
+                <canvas id="cvs_resp"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audioAlarm" loop src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
 
     <script>
-        /* ================= GLOBAL ================= */
-        let selectedPatient=null;
-        const vitals={};
-        let waves=[];
+        let currentPid = null;
+        let waves = {};
+        let audioEnabled = false; // Browser protection flag
 
-        /* ================= ROW INDEX ================= */
-        const ROW_INDEX={
-            ECG:0,
-            RESP:1,
-            PLETH:2,
-            CO2:3,
-            ART:4,
-            CVP:5
-        };
+        // 1. ENABLE AUDIO ON FIRST CLICK (Browser Requirement)
+        document.body.addEventListener('click', () => {
+            if (!audioEnabled) {
+                const a = document.getElementById('audioAlarm');
+                // Play empty sound to unlock audio engine
+                a.play().then(() => {
+                    a.pause();
+                    a.currentTime = 0;
+                    audioEnabled = true;
+                }).catch(e => {});
+            }
+        }, { once: true });
 
-        const ROW_GAP=10;     // distance between waves
-        const ROW_TOP=25;     // top wave Y
-
-        function rowY(idx){
-            return ROW_TOP - idx*ROW_GAP;
+        function showTab(id, btn) {
+            document.getElementById('tab-patients').style.display = id==='patients'?'grid':'none';
+            document.getElementById('tab-alerts').style.display = id==='alerts'?'block':'none';
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            btn.classList.add('active');
         }
 
-        /* ================= SIGNALR ================= */
-        const conn=new signalR.HubConnectionBuilder()
-        .withUrl("/VitalsHub")
-        .withAutomaticReconnect()
-        .build();
+        const conn = new signalR.HubConnectionBuilder().withUrl("/VitalsHub").build();
 
-        conn.on("ReceiveVitals",d=>{
-            vitals[d.patientId]=d;
+        conn.on("ReceiveVitals", d => {
+            // --- VISUAL UPDATES ---
+            const dot = document.getElementById(`dot_${d.patientId}`);
+            const card = document.getElementById(`card_${d.patientId}`);
 
-            if(!document.getElementById("opt_"+d.patientId)){
-                const o=document.createElement("option");
-                o.id="opt_"+d.patientId;
-                o.value=d.patientId;
-                o.text=d.patientName;
-                patientSelect.appendChild(o);
+            if(dot && card) {
+                if(d.status === "Critical" || d.status === "Warning") {
+                    dot.className = "status-dot status-crit";
+                    card.style.borderColor = d.status === "Critical" ? "red" : "orange";
+                } else {
+                    dot.className = "status-dot status-ok";
+                    card.style.borderColor = "#333";
+                }
             }
 
-            if(!selectedPatient){
-                selectedPatient=d.patientId;
-                patientSelect.value=d.patientId;
-                loadPatient(d.patientId);
+            if(currentPid === d.patientId) {
+                document.getElementById('mon_hr').innerText = d.ecg;
+                document.getElementById('mon_spo2').innerText = d.spO2;
+                document.getElementById('mon_temp').innerText = d.temp;
             }
 
-            if(selectedPatient==d.patientId) updateValues(d);
+            // --- GLOBAL SOUND LOGIC (THE FIX) ---
+            // If ANY patient sends a Critical status, play sound immediately
+            if (d.status === "Critical") {
+                playSound();
+            }
+            // If we are watching a patient and they become Normal, we can try to stop it
+            else if (currentPid === d.patientId && d.status === "Normal") {
+                stopSound();
+            }
         });
 
         conn.start();
 
-        patientSelect.onchange=e=>{
-            selectedPatient=e.target.value;
-            loadPatient(selectedPatient);
-        };
+        function startMonitor(pid, name) {
+            currentPid = pid;
+            document.getElementById('mon_name').innerText = name.toUpperCase();
+            document.getElementById('monitorOverlay').style.display = 'grid';
 
-        /* ================= UI ================= */
-        function updateValues(v){
-            v_ecg.innerText  = v.ecg+" bpm";
-            v_resp.innerText = v.resp;
-            v_spo2.innerText = v.spO2+"%";
-            v_co2.innerText  = v.cO2;
-            v_ibp.innerText  = v.ibp;
-            v_nibp.innerText = v.nibp;
+            if(waves.ecg) waves.ecg.stop();
+            if(waves.spo2) waves.spo2.stop();
+            if(waves.resp) waves.resp.stop();
+
+            waves.ecg = new WaveController('cvs_ecg', '#00ff41', 'ecg');
+            waves.spo2 = new WaveController('cvs_spo2', '#00f0ff', 'sine');
+            waves.resp = new WaveController('cvs_resp', '#ffee00', 'resp');
         }
 
-        /* ================= THREE ================= */
-        const scene=new THREE.Scene();
-        const cam=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,1000);
-        cam.position.z=60;
-
-        const renderer=new THREE.WebGLRenderer({antialias:true});
-        renderer.setSize(innerWidth,innerHeight);
-        document.body.appendChild(renderer.domElement);
-
-        scene.add(new THREE.PointLight(0xffffff,1));
-
-        function ecgShape(x,a){
-            const m=x%6;
-            if(m<0.15)return a*2;
-            if(m<0.3)return -a*0.6;
-            return Math.sin(x*0.5)*a*0.2;
+        function closeMonitor() {
+            currentPid = null;
+            document.getElementById('monitorOverlay').style.display = 'none';
+            // Optional: Stop sound when closing monitor?
+            // Better to leave it on if someone else is critical,
+            // but for this demo, let's stop it to be less annoying.
+            stopSound();
         }
 
-        function wave(color,row,ampFn,f=1,ecg=false){
-            const pts=[];
-            for(let i=0;i<400;i++) pts.push(new THREE.Vector3(i*0.15,0,0));
-            const g=new THREE.BufferGeometry().setFromPoints(pts);
-            const l=new THREE.Line(g,new THREE.LineBasicMaterial({color}));
-            l.position.y=rowY(row);
-            scene.add(l);
-            let p=0;
-            return {line:l,update(){
-                const a=g.attributes.position.array;
-                const amp=ampFn()||0.1;
-                for(let i=0;i<a.length;i+=3){
-                    const x=a[i];
-                    a[i+1]=ecg?ecgShape(x+p,amp):Math.sin(x*f+p)*amp ;
+        function playSound() {
+            if(!audioEnabled) return; // Wait for user click
+            const a = document.getElementById('audioAlarm');
+            if(a.paused) {
+                a.currentTime = 0;
+                a.play().catch(e => console.log("Audio blocked: click page to enable"));
+            }
+        }
+
+        function stopSound() {
+            const a = document.getElementById('audioAlarm');
+            if(!a.paused) {
+                a.pause();
+                a.currentTime=0;
+            }
+        }
+
+        class WaveController {
+            constructor(canvasId, color, type) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.color = color;
+                this.type = type;
+                this.running = true;
+                this.resize();
+                this.x = 0; this.speed = 2; this.midY = this.canvas.height / 2;
+                this.animate();
+            }
+            resize() { this.canvas.width = this.canvas.offsetWidth; this.canvas.height = this.canvas.offsetHeight; this.midY = this.canvas.height / 2; }
+
+            getValue(t) {
+                if (this.type === 'ecg') {
+                    let p = t % 100;
+                    if(p > 10 && p < 20) return -10;
+                    if(p >= 35 && p < 45) return -80;
+                    if(p >= 45 && p < 50) return 20;
+                    if(p > 60 && p < 80) return -15; return 0;
                 }
-                g.attributes.position.needsUpdate=true;
-                p+=0.25;
-            }};
+                else return Math.sin(t * 0.1) * 30;
+            }
+            animate() {
+                if(!this.running) return;
+                this.ctx.clearRect(this.x, 0, 10, this.canvas.height);
+                this.ctx.beginPath(); this.ctx.strokeStyle = this.color; this.ctx.lineWidth = 3;
+                let y = this.midY + this.getValue(this.x + (Date.now()/10));
+                if(this.x > 0) this.ctx.moveTo(this.x - this.speed, this.midY); else this.ctx.moveTo(this.x, y);
+                this.ctx.lineTo(this.x, y); this.ctx.stroke();
+                this.x += this.speed; if (this.x > this.canvas.width) this.x = 0;
+                requestAnimationFrame(() => this.animate());
+            }
+            stop() { this.running = false; }
         }
-
-        function clearWaves(){
-            waves.forEach(w=>scene.remove(w.line));
-            waves=[];
-        }
-
-        /* ================= LOAD PATIENT ================= */
-        function loadPatient(id){
-            clearWaves();
-            const v=vitals[id];
-            updateValues(v);
-
-            waves=[
-                wave(0x00ff00,ROW_INDEX.ECG, ()=>v.ecg/20,2,true),
-                wave(0xffff00,ROW_INDEX.RESP,()=>v.resp/4,0.6),
-                wave(0x00ffff,ROW_INDEX.PLETH,()=>v.spO2/50),
-                wave(0xff00ff,ROW_INDEX.CO2,  ()=>v.cO2/10),
-                wave(0xff8800,ROW_INDEX.ART,  ()=>2),
-                wave(0xff4444,ROW_INDEX.CVP,  ()=>1)
-            ];
-        }
-
-        function animate(){
-            requestAnimationFrame(animate);
-            waves.forEach(w=>w.update());
-            renderer.render(scene,cam);
-        }
-        animate();
     </script>
+
+
 
 </body>
 </html>

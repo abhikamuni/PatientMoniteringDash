@@ -2,13 +2,14 @@
 {
     public class AlertService
     {
-
         public string GetStatus(int heartRate, int oxygen, float temperature)
         {
-            if (heartRate > 120 || oxygen < 90 || temperature > 38)
+            // CRITICAL CONDITIONS
+            if (heartRate > 140 || heartRate < 40 || oxygen < 85 || temperature > 39)
                 return "Critical";
 
-            if (heartRate > 100 || oxygen < 95)
+            // WARNING CONDITIONS
+            if (heartRate > 110 || heartRate < 55 || oxygen < 92 || temperature > 37.8)
                 return "Warning";
 
             return "Normal";
